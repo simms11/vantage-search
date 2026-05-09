@@ -48,12 +48,16 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
-    }
-
-    private boolean isTokenExpired(String token) {
-        return parseClaims(token).getExpiration().before(new Date());
+        Claims claims = parseClaims(token);
+        // Tokens without a jti can never be revoked through the blacklist.
+        // Reject them so a future code path that forgets to set .id() can't
+        // mint un-revocable tokens.
+        if (claims.getId() == null || claims.getId().isBlank()) {
+            return false;
+        }
+        return userDetails.getUsername().equals(claims.getSubject())
+                && claims.getExpiration() != null
+                && claims.getExpiration().after(new Date());
     }
 
     private Claims parseClaims(String token) {
