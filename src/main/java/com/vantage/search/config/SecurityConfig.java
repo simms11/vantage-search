@@ -22,7 +22,7 @@ import org.springframework.http.HttpStatus;
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties({JwtProperties.class, RateLimitProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, RateLimitProperties.class, AdminProperties.class})
 @RequiredArgsConstructor
 public class SecurityConfig {
 
