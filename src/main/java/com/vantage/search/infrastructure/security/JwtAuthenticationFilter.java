@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -54,8 +56,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     }
                 }
             }
-        } catch (Exception ignored) {
-            // Invalid or expired token — continue unauthenticated; security rules reject the request
+        } catch (Exception ex) {
+            // Invalid token (signature/expiry/format), revoked jti, or deleted user.
+            // Always proceed unauthenticated; security rules reject the request.
+            // Logged at debug so an unauthenticated 401 in prod can be traced to the cause
+            // (e.g. JwtException vs UsernameNotFoundException) without flooding WARN.
+            if (log.isDebugEnabled()) {
+                log.debug("JWT authentication skipped: {} - {}", ex.getClass().getSimpleName(), ex.getMessage());
+            }
         }
 
         filterChain.doFilter(request, response);
