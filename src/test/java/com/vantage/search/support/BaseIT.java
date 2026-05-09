@@ -34,7 +34,7 @@ public abstract class BaseIT {
         if (!redis.isRunning()) redis.start();
     }
 
-    @Autowired(required = false)
+    @Autowired
     private StringRedisTemplate redisTemplateForCleanup;
 
     /**
@@ -44,9 +44,6 @@ public abstract class BaseIT {
      * here keeps the test/production patterns consistent.
      */
     protected void deleteRedisKeysMatching(String pattern) {
-        if (redisTemplateForCleanup == null) {
-            return;
-        }
         Set<String> matches = new HashSet<>();
         try (Cursor<String> cursor = redisTemplateForCleanup.scan(
                 ScanOptions.scanOptions().match(pattern).count(100).build())) {
