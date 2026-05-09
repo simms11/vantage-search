@@ -34,6 +34,10 @@ public class CacheConfig {
         // polymorphism markers fail to resolve.
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModules(SecurityJackson2Modules.getModules(getClass().getClassLoader()));
+        // Embed an @class type marker for any cached value, not just the ones
+        // covered by Security mixins. Without this, a cache added later for a
+        // plain DTO would deserialise as LinkedHashMap and fail at the call site.
+        SecurityJackson2Modules.enableDefaultTyping(mapper);
 
         RedisCacheConfiguration defaults = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(5))
