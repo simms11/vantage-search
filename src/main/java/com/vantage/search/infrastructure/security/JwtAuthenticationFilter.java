@@ -1,5 +1,6 @@
 package com.vantage.search.infrastructure.security;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,13 +36,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(7);
         try {
-            String username = jwtService.extractUsername(token);
-            String jti = jwtService.extractJti(token);
+            // Verify the signature and extract claims exactly once per request.
+            // Subsequent checks (jti, subject, expiration) read from this object
+            // rather than re-parsing and re-verifying the JWT.
+            Claims claims = jwtService.parseClaims(token);
+            String username = claims.getSubject();
+            String jti = claims.getId();
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (!tokenBlacklistService.isRevoked(jti)) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                    if (jwtService.isTokenValid(token, userDetails)) {
+                    if (jwtService.isTokenValid(claims, userDetails)) {
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities());
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

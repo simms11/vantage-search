@@ -35,6 +35,19 @@ public class JwtService {
                 .compact();
     }
 
+    /**
+     * Verifies the JWT signature and returns its claims. The hot path (the
+     * authentication filter) calls this once per request and reuses the
+     * resulting {@link Claims} for username, jti, and expiration checks.
+     */
+    public Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
     public String extractUsername(String token) {
         return parseClaims(token).getSubject();
     }
@@ -47,8 +60,7 @@ public class JwtService {
         return parseClaims(token).getExpiration().toInstant().atOffset(ZoneOffset.UTC);
     }
 
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        Claims claims = parseClaims(token);
+    public boolean isTokenValid(Claims claims, UserDetails userDetails) {
         // Tokens without a jti can never be revoked through the blacklist.
         // Reject them so a future code path that forgets to set .id() can't
         // mint un-revocable tokens.
@@ -58,13 +70,5 @@ public class JwtService {
         return userDetails.getUsername().equals(claims.getSubject())
                 && claims.getExpiration() != null
                 && claims.getExpiration().after(new Date());
-    }
-
-    private Claims parseClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(secretKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
     }
 }
