@@ -12,12 +12,17 @@ import java.util.UUID;
 @Repository
 public interface ClientRepository extends JpaRepository<ClientEntity, UUID> {
 
+    /**
+     * The WHERE and ORDER BY use the same expression as the GIN trigram index
+     * (changelog 005-add-trigram-index-for-search) so Postgres can plan the
+     * filter against the index rather than a sequential scan + sort.
+     */
     @SuppressWarnings("SqlResolve")
     @Query(value = """
         SELECT * FROM clients
         WHERE similarity(first_name || ' ' || last_name || ' ' || email || ' ' || COALESCE(description, ''), :q) > 0.15
            OR email ILIKE CONCAT('%', :q, '%')
-        ORDER BY similarity(first_name || ' ' || last_name || ' ' || email, :q) DESC
+        ORDER BY similarity(first_name || ' ' || last_name || ' ' || email || ' ' || COALESCE(description, ''), :q) DESC
         LIMIT :limit
         """, nativeQuery = true)
     List<ClientEntity> searchClients(@Param("q") String query, @Param("limit") int limit);
