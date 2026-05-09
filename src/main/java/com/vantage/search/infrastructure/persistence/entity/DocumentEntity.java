@@ -30,8 +30,13 @@ public class DocumentEntity {
     @Column(columnDefinition = "TEXT")
     private String summary;
 
-    @Builder.Default
     @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt;
 
+    @PrePersist
+    void onPersist() {
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+    }
 }

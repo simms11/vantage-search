@@ -34,6 +34,12 @@ public class UserEntity {
     private boolean enabled = true;
 
     @Column(name = "created_at", nullable = false)
-    @Builder.Default
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt;
+
+    @PrePersist
+    void onPersist() {
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+    }
 }
