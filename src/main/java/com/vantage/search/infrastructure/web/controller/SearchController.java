@@ -1,7 +1,7 @@
 package com.vantage.search.infrastructure.web.controller;
 
+import com.vantage.search.application.dto.response.SearchResultResponse;
 import com.vantage.search.application.port.in.SearchUseCase;
-import com.vantage.search.domain.model.SearchResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,12 +30,14 @@ public class SearchController {
             description = "Executes a unified search across clients and documents, merging PostgreSQL lexical results with AI semantic matches via RRF."
     )
     @GetMapping("/search")
-    public List<SearchResult> search(
+    public List<SearchResultResponse> search(
             @Parameter(description = "The search query string", example = "Vantage Wealth", required = true)
             @RequestParam("query") @NotBlank @Size(max = 500) String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        return searchUseCase.search(query, page, size);
+        return searchUseCase.search(query, page, size).stream()
+                .map(SearchResultResponse::from)
+                .toList();
     }
 }

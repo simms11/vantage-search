@@ -1,30 +1,20 @@
 package com.vantage.search.domain.model;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Unified API contract for polymorphic search results.
- * Ensures a predictable JSON schema for API consumers.
+ * Unified domain model for polymorphic search results.
+ * Wire-format concerns (JSON shape, polymorphism discriminator) live in the
+ * {@code application.dto.response.SearchResultResponse} family.
  */
-@JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        include = JsonTypeInfo.As.PROPERTY,
-        property = "type"
-)
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = SearchResult.ClientMatch.class, name = "client"),
-        @JsonSubTypes.Type(value = SearchResult.DocumentMatch.class, name = "document")
-})
 public sealed interface SearchResult permits SearchResult.ClientMatch, SearchResult.DocumentMatch {
     UUID id();
     Double score();
     String explanation();
     SearchResult withUpdatedScore(Double newScore);
+
     record ClientMatch(
             UUID id,
             String firstName,

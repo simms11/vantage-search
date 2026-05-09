@@ -2,8 +2,8 @@ package com.vantage.search.infrastructure.web.controller;
 
 import com.vantage.search.application.dto.request.ClientRequest;
 import com.vantage.search.application.dto.request.DocumentRequest;
+import com.vantage.search.application.dto.response.SearchResultResponse;
 import com.vantage.search.application.port.in.ClientUseCase;
-import com.vantage.search.domain.model.SearchResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,14 +25,14 @@ public class ClientManagementController {
     @Operation(summary = "Register a new client", description = "Initialises a new wealth management client profile.")
     @PostMapping("/clients")
     @ResponseStatus(HttpStatus.CREATED)
-    public SearchResult.ClientMatch createClient(@Valid @RequestBody ClientRequest request) {
-        return clientUseCase.createClient(request);
+    public SearchResultResponse.ClientMatch createClient(@Valid @RequestBody ClientRequest request) {
+        return SearchResultResponse.ClientMatch.from(clientUseCase.createClient(request));
     }
 
     @Operation(summary = "Get a client by ID")
     @GetMapping("/clients/{id}")
-    public SearchResult.ClientMatch getClient(@PathVariable UUID id) {
-        return clientUseCase.getClient(id);
+    public SearchResultResponse.ClientMatch getClient(@PathVariable UUID id) {
+        return SearchResultResponse.ClientMatch.from(clientUseCase.getClient(id));
     }
 
     @Operation(summary = "Delete a client", description = "Permanently removes the client and all associated documents.")
@@ -44,16 +44,18 @@ public class ClientManagementController {
 
     @Operation(summary = "List documents for a client")
     @GetMapping("/clients/{id}/documents")
-    public List<SearchResult.DocumentMatch> getClientDocuments(@PathVariable UUID id) {
-        return clientUseCase.getClientDocuments(id);
+    public List<SearchResultResponse.DocumentMatch> getClientDocuments(@PathVariable UUID id) {
+        return clientUseCase.getClientDocuments(id).stream()
+                .map(SearchResultResponse.DocumentMatch::from)
+                .toList();
     }
 
     @Operation(summary = "Attach document to client", description = "Persists a document and triggers background AI summarisation and indexing.")
     @PostMapping("/clients/{id}/documents")
     @ResponseStatus(HttpStatus.CREATED)
-    public SearchResult.DocumentMatch createDocument(
+    public SearchResultResponse.DocumentMatch createDocument(
             @PathVariable UUID id,
             @Valid @RequestBody DocumentRequest request) {
-        return clientUseCase.createDocument(id, request);
+        return SearchResultResponse.DocumentMatch.from(clientUseCase.createDocument(id, request));
     }
 }
