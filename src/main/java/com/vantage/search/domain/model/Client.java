@@ -1,6 +1,6 @@
 package com.vantage.search.domain.model;
 
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public record Client(
@@ -9,5 +9,5 @@ public record Client(
         String lastName,
         String email,
         String description,
-        List<String> socialLinks
+        Set<String> socialLinks
 ) {}

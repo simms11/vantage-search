@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
 
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -31,9 +31,13 @@ public class ClientEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    /**
+     * Stored as a Set so duplicate links from input are silently coalesced and
+     * the (client_id, link) composite PK in client_social_links is not violated.
+     */
     @ElementCollection
     @CollectionTable(name = "client_social_links", joinColumns = @JoinColumn(name = "client_id"))
     @Column(name = "link")
     @BatchSize(size = 50)
-    private List<String> socialLinks;
+    private Set<String> socialLinks;
 }

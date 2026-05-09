@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,7 +52,7 @@ class UnifiedSearchServiceTest {
 
         SearchResult.ClientMatch mockClient = new SearchResult.ClientMatch(
                 UUID.randomUUID(), "John", "Doe", "john@vantage.com",
-                null, List.of(), 0.99, "DB Match"
+                null, Set.of(), 0.99, "DB Match"
         );
 
         SearchResult.DocumentMatch mockDoc = new SearchResult.DocumentMatch(
@@ -82,7 +83,7 @@ class UnifiedSearchServiceTest {
         String query = "test";
         SearchResult.ClientMatch mockClient = new SearchResult.ClientMatch(
                 UUID.randomUUID(), "Jane", "Smith", "jane@test.com",
-                null, List.of(), 0.50, "DB Match"
+                null, Set.of(), 0.50, "DB Match"
         );
 
         when(clientPersistencePort.findClientsByFuzzySearch(eq(query.toLowerCase()), anyInt())).thenReturn(List.of(mockClient));

@@ -1,7 +1,7 @@
 package com.vantage.search.domain.model;
 
 import java.time.OffsetDateTime;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -21,7 +21,7 @@ public sealed interface SearchResult permits SearchResult.ClientMatch, SearchRes
             String lastName,
             String email,
             String description,
-            List<String> socialLinks,
+            Set<String> socialLinks,
             Double score,
             String explanation
     ) implements SearchResult {

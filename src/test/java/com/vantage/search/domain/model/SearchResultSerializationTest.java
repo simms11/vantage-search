@@ -3,7 +3,7 @@ package com.vantage.search.domain.model;
 import org.junit.jupiter.api.Test;
 
 import java.time.OffsetDateTime;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,7 +14,7 @@ class SearchResultSerializationTest {
     void shouldRecreateRecordWithUpdatedScoreAndExplanation() {
         SearchResult.ClientMatch original = new SearchResult.ClientMatch(
                 UUID.randomUUID(), "John", "Doe", "john@vantage.com",
-                "Desc", List.of(), 0.85, "Exact email match"
+                "Desc", Set.of(), 0.85, "Exact email match"
         );
 
         SearchResult updated = original.withUpdatedScore(0.016);

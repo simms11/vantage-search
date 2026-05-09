@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.vantage.search.domain.model.SearchResult;
 
 import java.time.OffsetDateTime;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -25,7 +25,7 @@ public sealed interface SearchResultResponse permits SearchResultResponse.Client
             String lastName,
             String email,
             String description,
-            List<String> socialLinks,
+            Set<String> socialLinks,
             Double score,
             String explanation
     ) implements SearchResultResponse {

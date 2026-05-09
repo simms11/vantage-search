@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.json.JsonTest;
 
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,7 +21,7 @@ class SearchResultResponseSerializationTest {
     void clientMatchSerialisesWithTypeDiscriminator() throws Exception {
         SearchResultResponse response = SearchResultResponse.ClientMatch.from(new SearchResult.ClientMatch(
                 UUID.randomUUID(), "John", "Doe", "john@vantage.com",
-                "Desc", List.of("link"), 1.0, "Explanation"));
+                "Desc", Set.of("link"), 1.0, "Explanation"));
 
         String json = objectMapper.writeValueAsString(response);
 

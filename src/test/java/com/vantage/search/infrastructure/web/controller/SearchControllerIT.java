@@ -12,6 +12,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.Mockito.when;
@@ -38,7 +39,7 @@ public class SearchControllerIT extends BaseIT {
                 "Doe",
                 "john@vantage.com",
                 "Financial advisor",
-                List.of(),
+                Set.of(),
                 1.0,
                 "Lexical match"
         );

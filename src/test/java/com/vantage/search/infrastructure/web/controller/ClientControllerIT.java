@@ -15,6 +15,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -66,7 +67,7 @@ public class ClientControllerIT extends BaseIT {
     void shouldReturn400ForInvalidEmail() throws Exception {
         // given
         ClientRequest invalidRequest = new ClientRequest(
-                "John", "Doe", "not-an-email", "Desc", List.of()
+                "John", "Doe", "not-an-email", "Desc", Set.of()
         );
 
         // WHEN & THEN
