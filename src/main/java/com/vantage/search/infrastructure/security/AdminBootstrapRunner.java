@@ -1,6 +1,7 @@
 package com.vantage.search.infrastructure.security;
 
 import com.vantage.search.infrastructure.persistence.entity.UserEntity;
+import com.vantage.search.infrastructure.persistence.entity.UserRole;
 import com.vantage.search.infrastructure.persistence.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +47,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
             userRepository.save(UserEntity.builder()
                     .username(adminUsername)
                     .password(adminPassword)
-                    .role("ADMIN")
+                    .role(UserRole.ADMIN)
                     .build());
             log.info("Admin user '{}' bootstrapped.", adminUsername);
         } catch (DataIntegrityViolationException ex) {

@@ -20,7 +20,7 @@ public class VantageUserDetailsService implements UserDetailsService {
                 .filter(u -> u.isEnabled())
                 .map(u -> User.withUsername(u.getUsername())
                         .password(u.getPassword())
-                        .roles(u.getRole())
+                        .roles(u.getRole().name())
                         .build())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
