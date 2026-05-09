@@ -207,7 +207,7 @@ The test suite uses Testcontainers to spin up isolated PostgreSQL and Redis inst
 ./mvnw test
 ```
 
-Runs all 19 tests: 12 unit tests and 7 integration tests (requires Docker).
+Runs the full suite. Unit tests are instant; integration tests spin up Postgres and Redis via Testcontainers and require Docker.
 
 ---
 
