@@ -91,15 +91,21 @@ public class TokenBlacklistService {
     public void warmCacheFromDatabase() {
         OffsetDateTime now = OffsetDateTime.now();
         int restored = 0;
+        int failed = 0;
         for (TokenBlacklistEntity entity : repository.findByExpiresAtAfter(now)) {
             try {
                 cacheRevocation(entity.getJti(), entity.getExpiresAt(), now);
                 restored++;
             } catch (DataAccessException ex) {
+                failed++;
                 log.warn("Redis warm-up write failed for jti={}: {}", entity.getJti(), ex.getMessage());
             }
         }
-        if (restored > 0) {
+        if (failed > 0) {
+            log.warn("Token blacklist cache warm-up partial: restored={}, failed={}. "
+                    + "Failed jtis remain in DB and will be retried at next restart.",
+                    restored, failed);
+        } else if (restored > 0) {
             log.info("Warmed token blacklist cache with {} unexpired entries.", restored);
         }
     }
