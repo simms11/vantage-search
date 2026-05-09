@@ -113,22 +113,31 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         String traceId = MDC.get(TRACE_ID_KEY);
-
         String sqlState = sqlStateOf(ex);
-        log.warn("DATA_INTEGRITY_VIOLATION | traceId={} | sqlState={}", traceId, sqlState);
 
-        String detail = "A data integrity violation occurred. This may be a duplicate unique value or a constraint violation.";
-        if ("23505".equals(sqlState)) {
-            detail = "A unique constraint was violated.";
+        // Only Postgres SQLState 23505 (unique_violation) is a client-resolvable conflict.
+        // NOT NULL / FK / check violations are bugs in our code or schema and surface as 500.
+        if (!"23505".equals(sqlState)) {
+            log.error("DATABASE_INTEGRITY_FAILURE | traceId={} | sqlState={}", traceId, sqlState, ex);
+            ProblemDetail serverError = ProblemDetail.forStatusAndDetail(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "An unexpected internal system error occurred. Please provide the traceId to support.");
+            serverError.setTitle("Internal Server Error");
+            serverError.setType(URI.create("https://api.vantage.com/errors/internal-error"));
+            serverError.setProperty("timestamp", Instant.now());
+            serverError.setProperty("traceId", traceId);
+            return serverError;
         }
 
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, detail);
-        problemDetail.setTitle("Resource Conflict");
-        problemDetail.setType(URI.create("https://api.vantage.com/errors/conflict"));
-        problemDetail.setProperty("timestamp", Instant.now());
-        problemDetail.setProperty("traceId", traceId);
+        log.warn("UNIQUE_CONSTRAINT_VIOLATION | traceId={} | sqlState={}", traceId, sqlState);
 
-        return problemDetail;
+        ProblemDetail conflict = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT, "A unique constraint was violated.");
+        conflict.setTitle("Resource Conflict");
+        conflict.setType(URI.create("https://api.vantage.com/errors/conflict"));
+        conflict.setProperty("timestamp", Instant.now());
+        conflict.setProperty("traceId", traceId);
+        return conflict;
     }
 
     @ExceptionHandler(BadCredentialsException.class)
