@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+// ServiceUnavailableException is in the same package; no import needed.
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -138,6 +139,23 @@ public class GlobalExceptionHandler {
         conflict.setProperty("timestamp", Instant.now());
         conflict.setProperty("traceId", traceId);
         return conflict;
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ProblemDetail handleServiceUnavailable(ServiceUnavailableException ex) {
+        String traceId = MDC.get(TRACE_ID_KEY);
+        log.error("SERVICE_UNAVAILABLE | traceId={} | cause={}",
+                traceId,
+                ex.getCause() == null ? "unknown" : ex.getCause().getClass().getSimpleName(),
+                ex);
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+        problemDetail.setTitle("Service Unavailable");
+        problemDetail.setType(URI.create("https://api.vantage.com/errors/service-unavailable"));
+        problemDetail.setProperty("timestamp", Instant.now());
+        problemDetail.setProperty("traceId", traceId);
+        return problemDetail;
     }
 
     @ExceptionHandler(BadCredentialsException.class)

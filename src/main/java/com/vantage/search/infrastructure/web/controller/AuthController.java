@@ -47,15 +47,20 @@ public class AuthController {
             return;
         }
         String token = authHeader.substring(7);
+
+        // Parsing failures (malformed / expired token) are absorbed: logout is
+        // idempotent. Revoke failures (e.g. Redis down) are not absorbed; they
+        // propagate to the global handler and surface as 503 so the client
+        // knows the token may not actually be revoked.
+        String jti;
+        java.time.OffsetDateTime expiration;
         try {
-            tokenBlacklistService.revoke(
-                    jwtService.extractJti(token),
-                    jwtService.extractExpiration(token)
-            );
+            jti = jwtService.extractJti(token);
+            expiration = jwtService.extractExpiration(token);
         } catch (RuntimeException ex) {
-            // Logout is idempotent: malformed or expired tokens shouldn't surface a 500.
-            // The auth filter already gated entry; anything left here is best-effort.
             log.debug("Logout suppressed token-parse exception: {}", ex.getClass().getSimpleName());
+            return;
         }
+        tokenBlacklistService.revoke(jti, expiration);
     }
 }

@@ -1,10 +1,13 @@
 package com.vantage.search.infrastructure.security;
 
+import com.vantage.search.exception.ServiceUnavailableException;
 import com.vantage.search.infrastructure.persistence.entity.TokenBlacklistEntity;
 import com.vantage.search.infrastructure.persistence.repository.TokenBlacklistRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -37,25 +40,6 @@ public class TokenBlacklistService {
     private final TokenBlacklistRepository repository;
     private final StringRedisTemplate redisTemplate;
 
-    /**
-     * Repopulate Redis from the durable store on startup so a Redis flush
-     * doesn't resurrect previously-revoked tokens until they expire.
-     */
-    @PostConstruct
-    @Transactional(readOnly = true)
-    public void warmCacheFromDatabase() {
-        OffsetDateTime now = OffsetDateTime.now();
-        int restored = 0;
-        for (TokenBlacklistEntity entity : repository.findByExpiresAtAfter(now)) {
-            if (cacheRevocation(entity.getJti(), entity.getExpiresAt(), now)) {
-                restored++;
-            }
-        }
-        if (restored > 0) {
-            log.info("Warmed token blacklist cache with {} unexpired entries.", restored);
-        }
-    }
-
     @Transactional
     public void revoke(String jti, OffsetDateTime expiresAt) {
         if (jti == null || jti.isBlank()) {
@@ -68,7 +52,41 @@ public class TokenBlacklistService {
                     .expiresAt(expiresAt)
                     .build());
         }
-        cacheRevocation(jti, expiresAt, OffsetDateTime.now());
+        // Redis is the read path: a write failure here means the token would
+        // continue to authenticate. Surface 503 so the client retries instead
+        // of receiving a misleading 204.
+        try {
+            cacheRevocation(jti, expiresAt, OffsetDateTime.now());
+        } catch (DataAccessException ex) {
+            throw new ServiceUnavailableException(
+                    "Token revocation cache unavailable; please retry.", ex);
+        }
+    }
+
+    /**
+     * Repopulate Redis from the durable store once the application is fully
+     * started, so a Redis flush doesn't resurrect previously-revoked tokens
+     * until they expire. Listening on {@link ApplicationReadyEvent} (rather
+     * than {@code @PostConstruct}) ensures the transactional proxy is wired
+     * before this method runs and that the readiness signal has fired.
+     * Swallows Redis errors so application start is not blocked on Redis.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional(readOnly = true)
+    public void warmCacheFromDatabase() {
+        OffsetDateTime now = OffsetDateTime.now();
+        int restored = 0;
+        for (TokenBlacklistEntity entity : repository.findByExpiresAtAfter(now)) {
+            try {
+                cacheRevocation(entity.getJti(), entity.getExpiresAt(), now);
+                restored++;
+            } catch (DataAccessException ex) {
+                log.warn("Redis warm-up write failed for jti={}: {}", entity.getJti(), ex.getMessage());
+            }
+        }
+        if (restored > 0) {
+            log.info("Warmed token blacklist cache with {} unexpired entries.", restored);
+        }
     }
 
     public boolean isRevoked(String jti) {
@@ -90,17 +108,11 @@ public class TokenBlacklistService {
         log.debug("Purged expired token blacklist entries.");
     }
 
-    private boolean cacheRevocation(String jti, OffsetDateTime expiresAt, OffsetDateTime now) {
+    private void cacheRevocation(String jti, OffsetDateTime expiresAt, OffsetDateTime now) {
         long seconds = Duration.between(now, expiresAt).getSeconds();
         if (seconds <= 0) {
-            return false;
+            return;
         }
-        try {
-            redisTemplate.opsForValue().set(KEY_PREFIX + jti, "1", Duration.ofSeconds(seconds));
-            return true;
-        } catch (Exception e) {
-            log.warn("Redis blacklist cache write failed for jti={}: {}", jti, e.getMessage());
-            return false;
-        }
+        redisTemplate.opsForValue().set(KEY_PREFIX + jti, "1", Duration.ofSeconds(seconds));
     }
 }
