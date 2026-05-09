@@ -51,8 +51,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         // Health and metrics probes are infrastructure traffic (k8s liveness,
         // Prometheus scrapes, load balancers). They should never compete with
         // user requests for the per-IP budget.
-        String path = request.getRequestURI();
-        return path.startsWith("/actuator/");
+        //
+        // Use the servlet path (already URI-decoded and normalised) rather than
+        // the raw request URI; otherwise a path like "/actuator/../api/clients"
+        // would match this prefix and bypass the rate limiter.
+        String path = request.getServletPath();
+        return path != null && path.startsWith("/actuator/");
     }
 
     @Override
