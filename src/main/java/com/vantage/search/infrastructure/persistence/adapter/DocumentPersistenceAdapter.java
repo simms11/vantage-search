@@ -7,6 +7,7 @@ import com.vantage.search.infrastructure.persistence.repository.DocumentReposito
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +20,7 @@ public class DocumentPersistenceAdapter implements DocumentPersistencePort {
     private final DocumentRepository repository;
 
     @Override
+    @Transactional
     public UUID save(UUID clientId, String title, String content) {
         DocumentEntity entity = DocumentEntity.builder()
                 .id(UUID.randomUUID())
@@ -32,19 +34,17 @@ public class DocumentPersistenceAdapter implements DocumentPersistencePort {
     }
 
     @Override
+    @Transactional
     public void updateSummary(UUID documentId, String summary) {
-        repository.findById(documentId).ifPresentOrElse(
-                doc -> {
-                    doc.setSummary(summary);
-                    repository.save(doc);
-                },
-                () -> log.warn("Document {} not found during summary update; it may have been deleted before AI processing completed.", documentId)
-        );
+        int updated = repository.updateSummaryById(documentId, summary);
+        if (updated == 0) {
+            log.warn("Document {} not found during summary update; it may have been deleted before AI processing completed.", documentId);
+        }
     }
 
     @Override
     public List<SearchResult.DocumentMatch> findByClientId(UUID clientId) {
-        return repository.findByClientId(clientId).stream()
+        return repository.findByClientIdOrderByCreatedAtDesc(clientId).stream()
                 .map(doc -> new SearchResult.DocumentMatch(
                         doc.getId(),
                         doc.getClientId(),
