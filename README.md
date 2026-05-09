@@ -12,7 +12,7 @@ An AI-powered search system built for the Vantage WealthTech platform. Advisors 
 
 3. **Hybrid Search with RRF**
    - **Clients (Fuzzy):** PostgreSQL `pg_trgm` GIN indexes search names, descriptions, and emails simultaneously.
-   - **Documents (Semantic):** `pgvector` HNSW indexes with `nomic-embed-text` embeddings — searching *"address proof"* retrieves documents containing *"utility bill"*.
+   - **Documents (Semantic):** `pgvector` HNSW indexes with `nomic-embed-text` embeddings; searching *"address proof"* retrieves documents containing *"utility bill"*.
    - Results from both sources are merged using **Reciprocal Rank Fusion (RRF)** into a single ranked list.
 
 4. **Security**
@@ -46,8 +46,8 @@ Edit `.env` and fill in all values:
 | Variable | Description |
 |---|---|
 | `SPRING_DATASOURCE_PASSWORD` | PostgreSQL password |
-| `APP_JWT_SECRET` | Base64-encoded secret, min 32 bytes — generate: `openssl rand -base64 32` |
-| `APP_ADMIN_PASSWORD` | `{bcrypt}`-prefixed hash — generate: `htpasswd -bnBC 10 "" pass \| tr -d ':\n'` |
+| `APP_JWT_SECRET` | Base64-encoded secret, min 32 bytes. Generate: `openssl rand -base64 32` |
+| `APP_ADMIN_PASSWORD` | `{bcrypt}`-prefixed hash. Generate: `htpasswd -bnBC 10 "" pass \| tr -d ':\n'` |
 | `APP_ADMIN_USERNAME` | Admin username (default: `admin`) |
 | `REDIS_URL` | Redis connection URL (default: `redis://vantage_redis:6379`) |
 | `SPRING_PROFILES_ACTIVE` | Leave empty for production; set to `dev` to seed sample data |
@@ -113,6 +113,12 @@ Interactive docs (with auth support) available at: `http://localhost:8080/swagge
 |---|---|---|---|
 | `GET` | `/api/search?query=...&page=0&size=20` | Required | Hybrid search across clients and documents |
 
+### Documents
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/documents/summary` | Required | Synchronous AI summary of arbitrary text (max 100,000 characters) |
+
 ---
 
 ## Example Requests
@@ -159,7 +165,7 @@ Content-Type: application/json
 }
 ```
 
-The document is persisted immediately (201). AI summarisation and vector indexing happen in the background — the `summary` field updates asynchronously.
+The document is persisted immediately (201). AI summarisation and vector indexing happen in the background; the `summary` field updates asynchronously.
 
 ### Hybrid Search
 
@@ -189,13 +195,13 @@ POST /api/auth/logout
 Authorization: Bearer <token>
 ```
 
-Returns `204 No Content`. The token is immediately invalidated — subsequent requests with it will be rejected.
+Returns `204 No Content`. The token is immediately invalidated; subsequent requests with it will be rejected.
 
 ---
 
 ## Rate Limiting
 
-60 requests per IP per 60-second window. Backed by Redis — limits are shared across all instances. Returns `429 Too Many Requests` when exceeded.
+60 requests per IP per 60-second window, enforced atomically via a Lua script. Backed by Redis so limits are shared across all instances. `/actuator/*` paths are exempt so health and metrics probes don't compete for the per-IP budget. Returns `429 Too Many Requests` when exceeded. If Redis is unreachable, the limiter fails open and increments the `rate.limit.fail.open` Micrometer counter so an SRE alert can fire on sustained drift.
 
 ---
 
