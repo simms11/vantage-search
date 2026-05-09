@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="010-drop-dead-embedding-column" author="alsahid">
+        <comment>
+            The documents.embedding column was created with the wrong dimension (1536 vs 768)
+            and is never read or written by application code. Spring AI manages its own
+            vector_store table. Drop the dead column and its unused HNSW index.
+        </comment>
+        <sql>DROP INDEX IF EXISTS idx_documents_embedding_hnsw;</sql>
+        <dropColumn tableName="documents" columnName="embedding"/>
+    </changeSet>
+
+</databaseChangeLog>

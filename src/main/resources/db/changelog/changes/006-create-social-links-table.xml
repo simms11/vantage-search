@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="009-create-social-links-table" author="alsahid">
+        <createTable tableName="client_social_links">
+            <column name="client_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_social_links_client"
+                             referencedTableName="clients"
+                             referencedColumnNames="id"/>
+            </column>
+            <column name="link" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

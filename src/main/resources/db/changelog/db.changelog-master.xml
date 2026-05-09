@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <include file="db/changelog/changes/001-initial-extensions.xml"/>
+    <include file="db/changelog/changes/002-create-clients-table.xml"/>
+    <include file="db/changelog/changes/003-create-documents-table.xml"/>
+    <include file="db/changelog/changes/004-add-missing-document-fields.xml"/>
+    <include file="db/changelog/changes/005-refactor-clients-spec.xml"/>
+    <include file="db/changelog/changes/006-create-social-links-table.xml"/>
+    <include file="db/changelog/changes/007-drop-dead-embedding-column.xml"/>
+    <include file="db/changelog/changes/008-fix-social-links-constraints.xml"/>
+
+</databaseChangeLog>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="007-refactor-clients-table" author="alsahid">
+        <comment>Refactoring clients table to match Vantage OpenAPI specification</comment>
+
+        <addColumn tableName="clients">
+            <column name="first_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+        </addColumn>
+
+        <dropColumn tableName="clients" columnName="name"/>
+    </changeSet>
+
+    <changeSet id="008-add-trigram-index-for-search" author="alsahid">
+        <comment>Senior Move: Multi-column GIN index for high-performance fuzzy search</comment>
+        <sql>
+            -- This creates a single index across all text fields.
+            -- This allows "Vantage Wealth" to match a client even if that string
+            -- is partially in the name and partially in the email domain.
+            CREATE INDEX idx_clients_fuzzy_search ON clients
+                USING gin ((first_name || ' ' || last_name || ' ' || email || ' ' || COALESCE(description, '')) gin_trgm_ops);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
