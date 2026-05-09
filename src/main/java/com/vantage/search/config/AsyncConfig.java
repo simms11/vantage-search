@@ -22,7 +22,7 @@ public class AsyncConfig implements AsyncConfigurer {
      * automatically. A queue-depth dashboard plus an alert on sustained
      * non-zero queued tasks makes Ollama back-pressure visible.
      */
-    @Bean(name = "aiAsyncExecutor", destroyMethod = "shutdown")
+    @Bean(name = "aiAsyncExecutor")
     public ThreadPoolTaskExecutor aiAsyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(4);
