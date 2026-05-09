@@ -32,8 +32,9 @@ class AuthFlowIT extends BaseIT {
     private TestRestTemplate restTemplate;
 
     @BeforeEach
-    void clearRateLimitState() {
+    void clearRedisState() {
         deleteRedisKeysMatching("rate-limit:*");
+        deleteRedisKeysMatching("jwt:revoked:*");
     }
 
     @Test
