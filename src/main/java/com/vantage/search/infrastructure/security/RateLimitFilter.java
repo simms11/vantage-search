@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.ReturnType;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,13 +19,28 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.net.URI;
-import java.time.Duration;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class RateLimitFilter extends OncePerRequestFilter {
+
+    /**
+     * Atomic INCR + (conditional) EXPIRE.
+     *
+     * <p>Combining the two commands into a single Lua script closes the boundary-burst window
+     * (where INCR succeeds but EXPIRE never lands, leaving a key without TTL) and prevents the
+     * "double window" that fixed-window non-atomic implementations leak around expiry.
+     */
+    private static final byte[] RATE_LIMIT_SCRIPT = ("""
+            local current = redis.call('INCR', KEYS[1])
+            if current == 1 then
+              redis.call('EXPIRE', KEYS[1], ARGV[1])
+            end
+            return current
+            """).getBytes(StandardCharsets.UTF_8);
 
     private final RateLimitProperties properties;
     private final ObjectMapper objectMapper;
@@ -37,10 +54,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String key = "rate-limit:" + ip;
 
         try {
-            Long count = redisTemplate.opsForValue().increment(key);
-            if (count != null && count == 1L) {
-                redisTemplate.expire(key, Duration.ofSeconds(properties.refillDurationSeconds()));
-            }
+            Long count = incrementAndExpire(key, properties.refillDurationSeconds());
             if (count != null && count > properties.capacity()) {
                 rejectWithTooManyRequests(response);
                 return;
@@ -51,6 +65,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    private Long incrementAndExpire(String key, long ttlSeconds) {
+        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        byte[] ttlBytes = Long.toString(ttlSeconds).getBytes(StandardCharsets.UTF_8);
+        return redisTemplate.execute((RedisCallback<Long>) connection ->
+                connection.scriptingCommands().eval(
+                        RATE_LIMIT_SCRIPT,
+                        ReturnType.INTEGER,
+                        1,
+                        keyBytes,
+                        ttlBytes));
     }
 
     private void rejectWithTooManyRequests(HttpServletResponse response) throws IOException {
