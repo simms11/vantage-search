@@ -44,8 +44,13 @@ public class SecurityConfig {
                 // and we don't issue a Basic challenge.
                 .exceptionHandling(eh -> eh.authenticationEntryPoint(
                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                // Order matters: rate-limit must run BEFORE the JWT filter so an
+                // attacker cannot force HMAC-SHA256 verification per request without
+                // consuming the per-IP budget. Anchor against each other rather than
+                // both anchoring on UsernamePasswordAuthenticationFilter, which left
+                // the relative order between rate limit and JWT auth unspecified.
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class);
         return http.build();
     }
 
