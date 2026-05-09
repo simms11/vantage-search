@@ -60,18 +60,16 @@ public class TokenBlacklistService {
         if (jti == null || jti.isBlank()) {
             return;
         }
-        if (!repository.existsByJti(jti)) {
-            repository.save(TokenBlacklistEntity.builder()
-                    .id(UUID.randomUUID())
-                    .jti(jti)
-                    .expiresAt(expiresAt)
-                    .build());
-        }
+        OffsetDateTime now = OffsetDateTime.now();
+        // Idempotent insert via Postgres ON CONFLICT DO NOTHING; two concurrent
+        // logouts of the same token cannot race into a unique-constraint 500.
+        repository.insertIfAbsent(UUID.randomUUID(), jti, expiresAt, now);
+
         // Redis is the read path: a write failure here means the token would
         // continue to authenticate. Surface 503 so the client retries instead
         // of receiving a misleading 204.
         try {
-            cacheRevocation(jti, expiresAt, OffsetDateTime.now());
+            cacheRevocation(jti, expiresAt, now);
         } catch (DataAccessException ex) {
             throw new ServiceUnavailableException(
                     "Token revocation cache unavailable; please retry.", ex);
