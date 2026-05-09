@@ -60,7 +60,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         // runs in a context without metrics (slice tests, etc.).
         MeterRegistry registry = meterRegistryProvider.getIfAvailable();
         if (registry != null) {
-            failOpenCounter = Counter.builder("rate_limit.fail_open")
+            failOpenCounter = Counter.builder("rate.limit.fail.open")
                     .description("Requests allowed because the rate-limit Redis check failed.")
                     .register(registry);
         }
