@@ -1,6 +1,6 @@
 package com.vantage.search.application.port.out;
 
-import com.vantage.search.domain.model.SearchResult;
+import com.vantage.search.domain.model.Document;
 
 import java.util.List;
 import java.util.UUID;
@@ -11,5 +11,5 @@ public interface DocumentPersistencePort {
 
     void updateSummary(UUID documentId, String summary);
 
-    List<SearchResult.DocumentMatch> findByClientId(UUID clientId);
+    List<Document> findByClientId(UUID clientId);
 }

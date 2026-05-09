@@ -2,7 +2,6 @@ package com.vantage.search.infrastructure.persistence.adapter;
 
 import com.vantage.search.application.port.out.ClientPersistencePort;
 import com.vantage.search.domain.model.Client;
-import com.vantage.search.domain.model.SearchResult;
 import com.vantage.search.infrastructure.persistence.entity.ClientEntity;
 import com.vantage.search.infrastructure.persistence.repository.ClientRepository;
 import lombok.RequiredArgsConstructor;
@@ -46,18 +45,9 @@ public class ClientPersistenceAdapter implements ClientPersistencePort {
     }
 
     @Override
-    public List<SearchResult.ClientMatch> findClientsByFuzzySearch(String query, int limit) {
+    public List<Client> findClientsByFuzzySearch(String query, int limit) {
         return repository.searchClients(query, limit).stream()
-                .map(entity -> new SearchResult.ClientMatch(
-                        entity.getId(),
-                        entity.getFirstName(),
-                        entity.getLastName(),
-                        entity.getEmail(),
-                        entity.getDescription(),
-                        entity.getSocialLinks(),
-                        1.0,
-                        "Trigram Match: Name or Email domain matches query"
-                ))
+                .map(this::toClient)
                 .toList();
     }
 

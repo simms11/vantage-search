@@ -1,7 +1,7 @@
 package com.vantage.search.infrastructure.persistence.adapter;
 
 import com.vantage.search.application.port.out.DocumentPersistencePort;
-import com.vantage.search.domain.model.SearchResult;
+import com.vantage.search.domain.model.Document;
 import com.vantage.search.infrastructure.persistence.entity.DocumentEntity;
 import com.vantage.search.infrastructure.persistence.repository.DocumentRepository;
 import lombok.RequiredArgsConstructor;
@@ -43,16 +43,14 @@ public class DocumentPersistenceAdapter implements DocumentPersistencePort {
     }
 
     @Override
-    public List<SearchResult.DocumentMatch> findByClientId(UUID clientId) {
+    public List<Document> findByClientId(UUID clientId) {
         return repository.findByClientIdOrderByCreatedAtDesc(clientId).stream()
-                .map(doc -> new SearchResult.DocumentMatch(
+                .map(doc -> new Document(
                         doc.getId(),
                         doc.getClientId(),
                         doc.getTitle(),
                         doc.getSummary(),
-                        doc.getCreatedAt(),
-                        1.0,
-                        "Document belonging to client"
+                        doc.getCreatedAt()
                 ))
                 .toList();
     }

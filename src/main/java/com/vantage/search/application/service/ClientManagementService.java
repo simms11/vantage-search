@@ -7,6 +7,7 @@ import com.vantage.search.application.port.out.ClientPersistencePort;
 import com.vantage.search.application.port.out.DocumentPersistencePort;
 import com.vantage.search.domain.event.DocumentCreatedEvent;
 import com.vantage.search.domain.model.Client;
+import com.vantage.search.domain.model.Document;
 import com.vantage.search.domain.model.SearchResult;
 import com.vantage.search.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -78,7 +79,11 @@ public class ClientManagementService implements ClientUseCase {
         if (!clientPersistencePort.clientExists(clientId)) {
             throw new ResourceNotFoundException("Client not found: " + clientId);
         }
-        return documentPersistencePort.findByClientId(clientId);
+        return documentPersistencePort.findByClientId(clientId).stream()
+                .map(d -> new SearchResult.DocumentMatch(
+                        d.id(), d.clientId(), d.title(), d.summary(), d.createdAt(),
+                        1.0, "Document belonging to client"))
+                .toList();
     }
 
     private SearchResult.ClientMatch toClientMatch(Client client, double score, String explanation) {

@@ -2,6 +2,7 @@ package com.vantage.search.application.service;
 import com.vantage.search.application.port.out.AiSearchPort;
 import com.vantage.search.application.port.out.ClientPersistencePort;
 import com.vantage.search.application.service.UnifiedSearchService;
+import com.vantage.search.domain.model.Client;
 import com.vantage.search.domain.model.SearchResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,9 +51,9 @@ class UnifiedSearchServiceTest {
         // GIVEN
         String query = "Vantage";
 
-        SearchResult.ClientMatch mockClient = new SearchResult.ClientMatch(
+        Client mockClient = new Client(
                 UUID.randomUUID(), "John", "Doe", "john@vantage.com",
-                null, Set.of(), 0.99, "DB Match"
+                null, Set.of()
         );
 
         SearchResult.DocumentMatch mockDoc = new SearchResult.DocumentMatch(
@@ -81,9 +82,9 @@ class UnifiedSearchServiceTest {
     void search_shouldGracefullyDegrade_whenAiSearchFails() {
         // GIVEN
         String query = "test";
-        SearchResult.ClientMatch mockClient = new SearchResult.ClientMatch(
+        Client mockClient = new Client(
                 UUID.randomUUID(), "Jane", "Smith", "jane@test.com",
-                null, Set.of(), 0.50, "DB Match"
+                null, Set.of()
         );
 
         when(clientPersistencePort.findClientsByFuzzySearch(eq(query.toLowerCase()), anyInt())).thenReturn(List.of(mockClient));

@@ -3,6 +3,7 @@ package com.vantage.search.application.service;
 import com.vantage.search.application.port.in.SearchUseCase;
 import com.vantage.search.application.port.out.AiSearchPort;
 import com.vantage.search.application.port.out.ClientPersistencePort;
+import com.vantage.search.domain.model.Client;
 import com.vantage.search.domain.model.SearchResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +44,13 @@ public class UnifiedSearchService implements SearchUseCase {
         List<SearchResult> documentMatches = new ArrayList<>();
 
         try {
-            clientMatches.addAll(clientPersistencePort.findClientsByFuzzySearch(normalisedQuery, candidateLimit));
+            List<Client> clients = clientPersistencePort.findClientsByFuzzySearch(normalisedQuery, candidateLimit);
+            for (Client c : clients) {
+                clientMatches.add(new SearchResult.ClientMatch(
+                        c.id(), c.firstName(), c.lastName(), c.email(),
+                        c.description(), c.socialLinks(),
+                        1.0, "Trigram Match: Name or Email domain matches query"));
+            }
         } catch (Exception e) {
             log.error("Relational search failed for query: {}. Reason: {}", query, e.getMessage());
         }
