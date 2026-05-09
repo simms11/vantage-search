@@ -48,8 +48,17 @@ public class TokenBlacklistService {
      * the JPA insert is staged but not committed until the proxy returns
      * normally; throwing {@link ServiceUnavailableException} after a Redis
      * write failure causes Spring to roll back the staged insert. On the next
-     * client retry the DB is empty again, the insert succeeds, and Redis is
+     * client retry the DB is empty again, the upsert succeeds, and Redis is
      * re-attempted, so revoke is fully idempotent across partial failures.
+     *
+     * <p>The one window the contract does NOT cover is "Redis write succeeds
+     * then JDBC commit fails" (e.g. connection pool eviction at commit time).
+     * Spring throws {@code TransactionSystemException} after Redis already has
+     * the key, so revocation is honoured for the rest of the token's lifetime
+     * via Redis TTL. The next process restart's warm-up cycle will not find a
+     * DB row to replay, so a Redis flush before the token expires would
+     * resurrect it. In practice this requires two simultaneous infrastructure
+     * failures and the exposure window equals the token expiration.
      *
      * <p>If you change this method's exception types, propagation, or rollback
      * rules, also update {@code TokenBlacklistRollbackIT} which pins this
