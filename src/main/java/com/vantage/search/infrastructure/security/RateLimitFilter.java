@@ -47,6 +47,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final StringRedisTemplate redisTemplate;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        // Health and metrics probes are infrastructure traffic (k8s liveness,
+        // Prometheus scrapes, load balancers). They should never compete with
+        // user requests for the per-IP budget.
+        String path = request.getRequestURI();
+        return path.startsWith("/actuator/");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
