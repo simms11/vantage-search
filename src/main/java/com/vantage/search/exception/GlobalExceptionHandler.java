@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 
@@ -19,6 +20,11 @@ import java.util.List;
  * Centralised exception handling for the API.
  * Standardises error responses to ensure a predictable schema for API consumers
  * and sanitises output to prevent internal stack trace leakage.
+ *
+ * <p>Logging discipline: never log raw exception messages from validation or
+ * database layers — Postgres and Spring's BindingResult include the offending
+ * value in the text and we don't want PII bleeding into the log pipeline.
+ * Stack traces stay at ERROR for genuine system failures.
  */
 @Slf4j
 @RestControllerAdvice
@@ -45,7 +51,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleBadRequests(IllegalArgumentException ex) {
         String traceId = MDC.get(TRACE_ID_KEY);
 
-        log.warn("INVALID_REQUEST | traceId={} | message={}", traceId, ex.getMessage());
+        log.warn("INVALID_REQUEST | traceId={}", traceId);
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Invalid Request");
@@ -59,7 +65,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleValidationExceptions(MethodArgumentNotValidException ex) {
         String traceId = MDC.get(TRACE_ID_KEY);
-        log.warn("VALIDATION_ERROR | traceId={} | message={}", traceId, ex.getMessage());
+
+        List<String> fields = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField())
+                .distinct()
+                .toList();
+        log.warn("VALIDATION_ERROR | traceId={} | fields={}", traceId, fields);
 
         List<String> errors = ex.getBindingResult().getFieldErrors().stream()
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
@@ -78,7 +89,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
         String traceId = MDC.get(TRACE_ID_KEY);
-        log.warn("CONSTRAINT_VIOLATION | traceId={} | message={}", traceId, ex.getMessage());
+
+        List<String> paths = ex.getConstraintViolations().stream()
+                .map(v -> v.getPropertyPath().toString())
+                .distinct()
+                .toList();
+        log.warn("CONSTRAINT_VIOLATION | traceId={} | paths={}", traceId, paths);
 
         List<String> errors = ex.getConstraintViolations().stream()
                 .map(v -> v.getPropertyPath() + ": " + v.getMessage())
@@ -98,13 +114,12 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         String traceId = MDC.get(TRACE_ID_KEY);
 
-        log.warn("DATA_INTEGRITY_VIOLATION | traceId={} | message={}", traceId, ex.getMessage());
+        String sqlState = sqlStateOf(ex);
+        log.warn("DATA_INTEGRITY_VIOLATION | traceId={} | sqlState={}", traceId, sqlState);
 
         String detail = "A data integrity violation occurred. This may be a duplicate unique value or a constraint violation.";
-
-        Throwable root = ex.getRootCause();
-        if (root != null && root.getMessage() != null && root.getMessage().contains("email")) {
-            detail = "A client with this email address already exists.";
+        if ("23505".equals(sqlState)) {
+            detail = "A unique constraint was violated.";
         }
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, detail);
@@ -119,7 +134,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ProblemDetail handleBadCredentials(BadCredentialsException ex) {
         String traceId = MDC.get(TRACE_ID_KEY);
-        log.warn("AUTH_FAILURE | traceId={} | message={}", traceId, ex.getMessage());
+        log.warn("AUTH_FAILURE | traceId={}", traceId);
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Invalid username or password");
         problemDetail.setTitle("Unauthorized");
@@ -133,7 +148,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleGenericExceptions(Exception ex) {
         String traceId = MDC.get(TRACE_ID_KEY);
 
-        log.error("CRITICAL_SYSTEM_ERROR | traceId={} | error={}", traceId, ex.getMessage(), ex);
+        log.error("CRITICAL_SYSTEM_ERROR | traceId={}", traceId, ex);
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -145,5 +160,16 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("traceId", traceId);
 
         return problemDetail;
+    }
+
+    private static String sqlStateOf(Throwable ex) {
+        Throwable cursor = ex;
+        while (cursor != null) {
+            if (cursor instanceof SQLException sql) {
+                return sql.getSQLState();
+            }
+            cursor = cursor.getCause();
+        }
+        return null;
     }
 }
