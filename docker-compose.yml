@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: vantage_postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: vantage_user
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      POSTGRES_DB: vantage_search_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vantage_user -d vantage_search_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: vantage_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    container_name: vantage_api
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # host.docker.internal resolves on Mac/Windows natively; on Linux it needs this entry
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://vantage_postgres:5432/vantage_search_db
+      - SPRING_DATASOURCE_USERNAME=vantage_user
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - REDIS_URL=redis://vantage_redis:6379
+      - SPRING_AI_OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-}
+      - APP_JWT_SECRET=${APP_JWT_SECRET}
+      - APP_ADMIN_USERNAME=${APP_ADMIN_USERNAME:-admin}
+      - APP_ADMIN_PASSWORD=${APP_ADMIN_PASSWORD}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
