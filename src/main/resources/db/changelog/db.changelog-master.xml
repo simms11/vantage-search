@@ -15,5 +15,6 @@
     <include file="db/changelog/changes/008-fix-social-links-constraints.xml"/>
     <include file="db/changelog/changes/009-create-vector-store.xml"/>
     <include file="db/changelog/changes/010-cascade-delete-documents.xml"/>
+    <include file="db/changelog/changes/011-create-users-table.xml"/>
 
 </databaseChangeLog>
