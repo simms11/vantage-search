@@ -5,14 +5,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.Map;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,15 +36,9 @@ class RateLimitFilterIT extends BaseIT {
     @Autowired
     private TestRestTemplate restTemplate;
 
-    @Autowired
-    private StringRedisTemplate redisTemplate;
-
     @BeforeEach
     void clearRateLimitState() {
-        Set<String> keys = redisTemplate.keys("rate-limit:*");
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
-        }
+        deleteRedisKeysMatching("rate-limit:*");
     }
 
     @Test
