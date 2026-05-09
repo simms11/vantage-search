@@ -2,12 +2,16 @@ package com.vantage.search.infrastructure.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vantage.search.config.RateLimitProperties;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.connection.ReturnType;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -45,6 +49,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final RateLimitProperties properties;
     private final ObjectMapper objectMapper;
     private final StringRedisTemplate redisTemplate;
+    private final ObjectProvider<MeterRegistry> meterRegistryProvider;
+    private Counter failOpenCounter;
+
+    @PostConstruct
+    void initMetrics() {
+        // Fail-open is silent by design (preserve availability when Redis is
+        // down) but a sustained increment means the rate limiter is no longer
+        // enforcing; alert on a non-zero rate. Optional in case this filter
+        // runs in a context without metrics (slice tests, etc.).
+        MeterRegistry registry = meterRegistryProvider.getIfAvailable();
+        if (registry != null) {
+            failOpenCounter = Counter.builder("rate_limit.fail_open")
+                    .description("Requests allowed because the rate-limit Redis check failed.")
+                    .register(registry);
+        }
+    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -73,7 +93,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 return;
             }
         } catch (Exception e) {
-            // Redis unavailable — fail open to preserve API availability
+            // Redis unavailable; fail open to preserve API availability.
+            if (failOpenCounter != null) {
+                failOpenCounter.increment();
+            }
             log.warn("Rate limit check failed for {}: {}. Allowing request.", ip, e.getMessage());
         }
 
