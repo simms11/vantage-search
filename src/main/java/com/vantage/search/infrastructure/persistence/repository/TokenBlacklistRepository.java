@@ -4,9 +4,11 @@ import com.vantage.search.infrastructure.persistence.entity.TokenBlacklistEntity
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public interface TokenBlacklistRepository extends JpaRepository<TokenBlacklistEntity, UUID> {
     boolean existsByJti(String jti);
     void deleteByExpiresAtBefore(OffsetDateTime cutoff);
+    List<TokenBlacklistEntity> findByExpiresAtAfter(OffsetDateTime now);
 }
