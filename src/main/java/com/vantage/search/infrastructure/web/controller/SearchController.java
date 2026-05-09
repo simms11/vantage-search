@@ -5,7 +5,10 @@ import com.vantage.search.application.port.in.SearchUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -33,8 +36,8 @@ public class SearchController {
     public List<SearchResultResponse> search(
             @Parameter(description = "The search query string", example = "Vantage Wealth", required = true)
             @RequestParam("query") @NotBlank @Size(max = 500) String query,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @PositiveOrZero int page,
+            @RequestParam(defaultValue = "20") @Positive @Max(100) int size) {
 
         return searchUseCase.search(query, page, size).stream()
                 .map(SearchResultResponse::from)
