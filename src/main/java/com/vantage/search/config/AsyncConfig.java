@@ -1,5 +1,6 @@
 package com.vantage.search.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -14,8 +15,15 @@ import java.util.concurrent.ThreadPoolExecutor;
 @EnableScheduling
 public class AsyncConfig implements AsyncConfigurer {
 
-    @Override
-    public Executor getAsyncExecutor() {
+    /**
+     * Exposing the executor as a Spring bean lets Spring Boot Actuator's
+     * {@code TaskExecutorMetricsAutoConfiguration} bind Micrometer gauges
+     * (executor.queued, executor.active, executor.pool.size, executor.completed)
+     * automatically. A queue-depth dashboard plus an alert on sustained
+     * non-zero queued tasks makes Ollama back-pressure visible.
+     */
+    @Bean(name = "aiAsyncExecutor", destroyMethod = "shutdown")
+    public ThreadPoolTaskExecutor aiAsyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(4);
         executor.setMaxPoolSize(16);
@@ -28,5 +36,10 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;
+    }
+
+    @Override
+    public Executor getAsyncExecutor() {
+        return aiAsyncExecutor();
     }
 }
