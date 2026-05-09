@@ -4,7 +4,6 @@ import com.vantage.search.support.BaseIT;
 import com.vantage.search.application.port.out.AiSearchPort;
 import com.vantage.search.application.port.out.ClientPersistencePort;
 import com.vantage.search.infrastructure.ai.service.SpringAiSummaryService;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,14 +67,15 @@ class SpringAiSummaryServiceIT extends BaseIT {
     }
 
     @Test
-    @Disabled("Skipped for demo - timeout logic requires client-level configuration")
     void shouldHandleExtremeLatencyGracefully() {
         wireMock.stubFor(post(urlEqualTo("/api/chat"))
                 .willReturn(aResponse()
                         .withStatus(200)
-                        .withFixedDelay(10000)
+                        .withFixedDelay(10_000)
                         .withBody("{\"message\": {\"content\": \"Too slow\"}}")));
 
+        // Read timeout in tests is 2 seconds (see application-test.properties);
+        // the WireMock 10-second delay must trip it.
         assertThrows(Exception.class, () -> {
             summaryService.generateBulletSummary("Summarize this document.");
         });
