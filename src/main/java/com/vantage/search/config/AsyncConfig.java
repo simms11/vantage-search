@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration
 @EnableAsync
@@ -21,6 +22,10 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("ai-async-");
         executor.setTaskDecorator(new MdcTaskDecorator());
+        // When the queue saturates, run the task on the publishing thread instead
+        // of silently dropping it. AbortPolicy would lose the @TransactionalEventListener
+        // event after commit because Spring swallows the rejection there.
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;
     }
