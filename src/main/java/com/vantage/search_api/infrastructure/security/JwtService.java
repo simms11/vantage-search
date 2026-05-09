@@ -9,6 +9,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.UUID;
 
@@ -35,6 +37,14 @@ public class JwtService {
 
     public String extractUsername(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    public String extractJti(String token) {
+        return parseClaims(token).getId();
+    }
+
+    public OffsetDateTime extractExpiration(String token) {
+        return parseClaims(token).getExpiration().toInstant().atOffset(ZoneOffset.UTC);
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
