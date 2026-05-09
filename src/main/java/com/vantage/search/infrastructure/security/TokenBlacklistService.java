@@ -40,6 +40,21 @@ public class TokenBlacklistService {
     private final TokenBlacklistRepository repository;
     private final StringRedisTemplate redisTemplate;
 
+    /**
+     * Revoke a token by jti.
+     *
+     * <p>Atomicity contract: the DB row and the Redis cache entry are written
+     * together or neither is. Because this method is {@code @Transactional},
+     * the JPA insert is staged but not committed until the proxy returns
+     * normally; throwing {@link ServiceUnavailableException} after a Redis
+     * write failure causes Spring to roll back the staged insert. On the next
+     * client retry the DB is empty again, the insert succeeds, and Redis is
+     * re-attempted, so revoke is fully idempotent across partial failures.
+     *
+     * <p>If you change this method's exception types, propagation, or rollback
+     * rules, also update {@code TokenBlacklistRollbackIT} which pins this
+     * contract.
+     */
     @Transactional
     public void revoke(String jti, OffsetDateTime expiresAt) {
         if (jti == null || jti.isBlank()) {
