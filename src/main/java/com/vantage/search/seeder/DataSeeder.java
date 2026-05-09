@@ -29,7 +29,15 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         seedClientsIfMissing();
-        seedVectorStoreIfMissing();
+        try {
+            seedVectorStoreIfMissing();
+        } catch (Exception ex) {
+            // Ollama may not be ready yet on a cold dev startup. The seed data
+            // is non-critical; surface the error and continue rather than
+            // aborting the whole application start.
+            log.warn("[SEEDER] Vector-store seed skipped: {}: {}",
+                    ex.getClass().getSimpleName(), ex.getMessage());
+        }
     }
 
     @Transactional
