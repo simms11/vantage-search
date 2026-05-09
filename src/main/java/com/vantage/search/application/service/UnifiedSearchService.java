@@ -7,6 +7,7 @@ import com.vantage.search.domain.model.SearchResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -27,6 +28,7 @@ public class UnifiedSearchService implements SearchUseCase {
     private static final int MAX_CANDIDATE_LIMIT = 200;
 
     @Override
+    @Transactional(readOnly = true)
     public List<SearchResult> search(String query, int page, int size) {
         if (query == null || query.trim().isBlank()) {
             return Collections.emptyList();
