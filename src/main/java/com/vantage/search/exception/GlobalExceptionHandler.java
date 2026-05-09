@@ -23,7 +23,7 @@ import java.util.List;
  * and sanitises output to prevent internal stack trace leakage.
  *
  * <p>Logging discipline: never log raw exception messages from validation or
- * database layers — Postgres and Spring's BindingResult include the offending
+ * database layers. Postgres and Spring's BindingResult include the offending
  * value in the text and we don't want PII bleeding into the log pipeline.
  * Stack traces stay at ERROR for genuine system failures.
  */
